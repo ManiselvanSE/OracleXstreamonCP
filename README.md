@@ -1,287 +1,195 @@
-# Oracle XStream CDC with Confluent Platform - Version 2.0
+# Oracle XStream CDC with Confluent Platform
 
-## Complete Documentation Package with JMX Monitoring
+Real-time Change Data Capture from Oracle Database to Apache Kafka using XStream API.
 
-**Version:** 2.0 (KRaft Mode - No Zookeeper!)  
-**Date:** July 13, 2026  
-**Stack:** Oracle 21c XE + Confluent Platform 7.6.0 (KRaft) + JMX Monitoring
+**Stack:** Oracle 21c XE + Confluent Platform 7.6.0 (KRaft Mode) + Oracle XStream CDC Connector
 
 ---
 
-## ⚠️ IMPORTANT: System Requirements
+## Prerequisites
 
-### Disk Space Requirements
-**Minimum:** 50 GB free disk space  
-**Recommended:** 100 GB or more
+**System Requirements:**
+- 4 vCPU, 16 GB RAM minimum
+- **100 GB disk space** (Oracle 21c XE image is ~10 GB)
+- Docker & Docker Compose
 
-The Oracle 21c XE Docker image is approximately 10 GB, and with Confluent Platform components, you'll need sufficient space for:
-- Docker images (~15 GB)
-- Container volumes and logs (~10 GB)
-- Working space (~25 GB)
-
-**AWS EC2:** If using EC2, ensure your root volume is at least 50 GB. The default 8 GB volume will cause deployment failures with "no space left on device" errors.
-
----
-
-## What's New in Version 2.0
-
-### 1. KRaft Mode - No Zookeeper! ✅
-- Kafka runs in KRaft mode (Zookeeper completely removed)
-- Simpler architecture with fewer moving parts
-- Faster startup and better performance
-- Future-proof (Zookeeper is deprecated in Kafka 4.0+)
-
-### 2. JMX Monitoring Support ✅
-- All Confluent services expose JMX metrics
-- Ports: 9101 (Broker), 9102 (Schema Registry), 9103 (Connect), 9104 (Control Center)
-- Ready for Prometheus/Grafana integration
-- Production-ready monitoring
-
-### 3. Oracle Setup Automation ✅
-- Complete SQL scripts for CDC configuration
-- Automated XStream outbound server setup
-- Schema rules configured correctly
-- Sample data loading scripts
-
-### 4. Streamlined Deployment ✅
-- One-command deployment
-- Copy-paste ready scripts
-- Complete step-by-step guide
-- Verified working configuration
+**Verified On:**
+- AWS EC2 t3.xlarge (Amazon Linux 2023)
+- Oracle Database 21c Express Edition
+- Confluent Platform 7.6.0
+- Oracle XStream CDC Source Connector 2.9.2
 
 ---
 
 ## Quick Start
 
-### Option 1: Use Existing EC2 with Oracle Already Running
-
-If you already have Oracle 21c XE running in Docker:
-
 ```bash
-# 1. Create directory structure
-mkdir -p ~/oracle-cdc/confluent-platform/connectors
-cd ~/oracle-cdc
+# 1. Clone repository
+git clone https://github.com/ManiselvanSE/OracleXstreamonCP.git
+cd OracleXstreamonCP
 
-# 2. Download JDBC driver
-wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/233/ojdbc11.jar -O confluent-platform/ojdbc11.jar
+# 2. Deploy Oracle Database
+docker network create shared-network
+docker run -d --name oracle21c \
+  --network shared-network \
+  -p 1521:1521 -p 5500:5500 \
+  -e ORACLE_PWD=confluent123 \
+  container-registry.oracle.com/database/express:21.3.0-xe
 
-# 3. Set permissions
-sudo chmod 777 confluent-platform/connectors
+# Wait for Oracle to start (2-3 minutes)
+docker logs -f oracle21c
 
-# 4. Download docker-compose.yml (copy from confluent-platform/docker-compose-stable.yml)
-# 5. Download connector config (copy from confluent-platform/oracle-xstream-cdc-config.json)
+# 3. Configure Oracle for CDC
+cd oracle-setup/scripts
+chmod +x 00_setup_cdc.sh
+./00_setup_cdc.sh
 
-# 6. Start Confluent Platform
-cd confluent-platform
+# 4. Deploy Confluent Platform
+cd ../../confluent-platform
+wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/233/ojdbc11.jar
+sudo chmod 777 $(pwd)
 docker-compose up -d
 
-# 7. Wait for services to start (2-3 minutes)
-sleep 120
+# Wait for services to start (2-3 minutes)
+docker-compose ps
 
-# 8. Deploy connector
+# 5. Deploy CDC Connector
 curl -X POST http://localhost:8083/connectors \
   -H "Content-Type: application/json" \
   -d @oracle-xstream-cdc-config.json
 
-# 9. Test CDC
+# 6. Verify connector status
+curl http://localhost:8083/connectors/oracle-xstream-cdc-source/status
+
+# 7. Test CDC pipeline
 docker exec -i oracle21c sqlplus -s ordermgmt/kafka@XEPDB1 <<EOF
-INSERT INTO ORDERS (ORDER_ID, CUSTOMER_ID, STATUS, ORDER_DATE) 
-VALUES (999, 1, 'PENDING', SYSDATE);
+INSERT INTO ORDERS (ORDER_ID, CUSTOMER_NAME, ORDER_DATE, TOTAL_AMOUNT, STATUS, CREATED_AT, UPDATED_AT)
+VALUES (999, 'Test Customer', SYSTIMESTAMP, 100.00, 'PENDING', SYSTIMESTAMP, SYSTIMESTAMP);
 COMMIT;
 EXIT;
 EOF
 
-# 10. Verify message
+# 8. Consume message from Kafka
 docker exec broker kafka-console-consumer \
   --bootstrap-server broker:29092 \
   --topic XEPDB1.ORDERMGMT.ORDERS \
   --from-beginning --max-messages 1
 ```
 
-### Option 2: Complete Fresh Setup
-
-See **DEPLOYMENT_GUIDE.md** for complete step-by-step instructions including:
-- Infrastructure setup
-- Oracle database deployment
-- CDC configuration
-- Confluent Platform deployment
-- Testing & validation
-
----
-
-## Documentation Files
-
-| File | Purpose | Audience |
-|------|---------|----------|
-| **DEPLOYMENT_GUIDE.md** | Complete step-by-step deployment | DevOps/Engineers |
-| **SUCCESS_CONFIGURATION.md** | Verified working configuration | All (Most Important) |
-| **CUSTOMER_SETUP_GUIDE.md** | Professional customer documentation | Customers |
-| **SETUP_GUIDE_TECHNICAL.md** | Detailed technical execution guide | Engineers |
-| **DEMO_QUICK_REFERENCE.md** | Quick demo playbook | Presenters |
-| **EXECUTIVE_SUMMARY.md** | Business summary and ROI | Management |
-| **IMPLEMENTATION_FINDINGS.md** | Real-world issues and solutions | Engineers |
-| **monitor-cdc.sh** | Monitoring automation script | Operations |
-| **demo-helper.sh** | Demo automation script | Presenters |
-
 ---
 
 ## Architecture
 
-### KRaft Mode (Production-Ready - No Zookeeper!)
-
 ```
-┌─────────────────┐
-│ Oracle 21c XE   │ port 1521
-│   - XEPDB1      │
-│   - XStream     │
-└────────┬────────┘
-         │ CDC
-         ▼
-┌─────────────────┐
-│  Kafka Broker   │ ports 9092, 9101 (JMX)
-│  (KRaft Mode)   │ ← No Zookeeper needed!
-└────────┬────────┘
-         │
-┌────────┴────────┐
-│ Schema Registry │ ports 8081, 9102 (JMX)
-└────────┬────────┘
-         │
-┌────────┴────────┐
-│ Kafka Connect   │ ports 8083, 9103 (JMX)
-│  + Oracle CDC   │
-└────────┬────────┘
-         │
-┌────────┴────────┐
-│ Control Center  │ ports 9021, 9104 (JMX)
-└─────────────────┘
+Oracle 21c XE (XEPDB1)
+  ↓ XStream API
+Kafka Connect (CDC Connector)
+  ↓
+Kafka Broker (KRaft Mode)
+  ↓
+Schema Registry
+  ↓
+Kafka Topics: XEPDB1.ORDERMGMT.*
 ```
 
-**Key Benefits of KRaft Mode:**
-- ✅ No Zookeeper dependency (simpler architecture)
-- ✅ Faster startup time
-- ✅ Better scalability
-- ✅ Future-proof (Zookeeper deprecated in Kafka 4.0+)
-- ✅ Fewer moving parts = easier operations
-
-**Legacy Option:** If you need Zookeeper for compatibility, use `docker-compose-stable.yml`
+**Services:**
+- **Oracle Database:** Port 1521
+- **Kafka Broker:** Port 9092
+- **Schema Registry:** Port 8081
+- **Kafka Connect:** Port 8083
+- **Control Center:** Port 9021
+- **JMX Monitoring:** Ports 9101-9104
 
 ---
 
-## JMX Monitoring
+## Repository Structure
 
-All services expose JMX metrics for monitoring:
-
-| Service | JMX Port | Metrics Available |
-|---------|----------|-------------------|
-| Kafka Broker (KRaft) | 9101 | Message rates, bytes in/out, partition metrics, controller metrics |
-| Schema Registry | 9102 | Schema operations, API calls |
-| Kafka Connect | 9103 | Connector status, task metrics, throughput |
-| Control Center | 9104 | UI metrics, monitoring data |
-
-### Accessing JMX Metrics
-
-**Via jconsole:**
-```bash
-jconsole <EC2-IP>:9101
+```
+OracleXstreamonCP/
+├── README.md
+├── DEPLOYMENT_GUIDE.md
+├── confluent-platform/
+│   ├── docker-compose.yml
+│   └── oracle-xstream-cdc-config.json
+└── oracle-setup/
+    └── scripts/
+        ├── 00_setup_cdc.sh
+        ├── 01_setup_database.sql
+        ├── 02_create_user.sql
+        ├── 03_create_schema_datamodel.sql
+        ├── 04_load_data.sql
+        ├── 05_create_xstream_user.sql
+        ├── 06_xstream_privs.sql
+        └── 07_create_xstream_outbound.sql
 ```
 
-**Via Prometheus:**
-See DEPLOYMENT_GUIDE.md for Prometheus/Grafana setup instructions.
-
 ---
 
-## Verified Working
+## CDC Features
 
-✅ **KRaft Mode** - Kafka without Zookeeper  
-✅ Oracle 21c XE with XStream CDC  
-✅ Confluent Platform 7.6.0  
-✅ Oracle XStream CDC Connector 2.9.2  
-✅ Real-time INSERT/UPDATE/DELETE capture  
-✅ JMX metrics exposed (ports 9101-9104)  
-✅ Topics auto-created: XEPDB1.ORDERMGMT.ORDERS, ORDER_ITEMS, CUSTOMERS  
-✅ Tested on AWS EC2 (t3.xlarge, Amazon Linux 2023)
-
----
-
-## Key Features
-
-### Real-Time CDC
+- **Real-time capture** of INSERT, UPDATE, DELETE operations
 - **Sub-second latency** from database to Kafka
-- Captures INSERT, UPDATE, DELETE operations
-- Before/after values for auditing
-- Exactly-once delivery guarantees
-
-### Production-Ready Monitoring
-- JMX metrics on all components
-- Ready for Prometheus/Grafana
-- Health checks and alerting
-- Performance metrics
-
-### Easy Deployment
-- Copy-paste commands
-- Automated setup scripts
-- Verified configurations
-- Complete troubleshooting guide
+- **Exactly-once delivery** guarantees
+- **Before/after values** for UPDATE operations
+- **Automatic topic creation** per table
+- **Schema evolution** via Schema Registry
 
 ---
 
-## Configuration Files
-
-### docker-compose.yml (Primary)
-**KRaft mode** - No Zookeeper + JMX monitoring (Production-Ready)
-
-### docker-compose-stable.yml (Legacy)
-Zookeeper-based configuration + JMX monitoring (for compatibility)
-
-### oracle-xstream-cdc-config.json
-Verified working connector configuration
-
-### Oracle Setup Scripts
-- `01_setup_database.sql` - Archive log and supplemental logging
-- `02_create_user.sql` - Application user creation
-- `03_create_schema_datamodel.sql` - Schema and tables
-- `04_load_data.sql` - Sample data
-- `05_create_xstream_user.sql` - XStream admin user
-- `06_xstream_privs.sql` - XStream privileges
-- `07_create_xstream_outbound.sql` - XStream outbound server
-
----
-
-## Terraform Support (Coming Soon)
-
-Terraform files for automated Oracle + Confluent deployment:
-- `terraform/main.tf` - Main configuration
-- `terraform/variables.tf` - Variables
-- `terraform/userdata.sh` - EC2 initialization
-
-**Note:** Terraform deployment is prepared but not yet tested. Manual deployment is recommended for now.
-
----
-
-## Common Commands
+## Testing
 
 ```bash
-# Start services
-docker-compose up -d
+# Insert test record
+docker exec -i oracle21c sqlplus -s ordermgmt/kafka@XEPDB1 <<EOF
+INSERT INTO CUSTOMERS (CUSTOMER_ID, CUSTOMER_NAME, EMAIL, PHONE, ADDRESS, CREATED_AT, UPDATED_AT)
+VALUES (100, 'Alice Johnson', 'alice@test.com', '555-0100', '123 Main St', SYSTIMESTAMP, SYSTIMESTAMP);
+COMMIT;
+EXIT;
+EOF
 
-# Stop services
-docker-compose down
-
-# Check connector status
-curl http://localhost:8083/connectors/oracle-xstream-cdc-source/status
-
-# List topics
-docker exec broker kafka-topics --bootstrap-server broker:29092 --list
-
-# Consume messages
+# Verify in Kafka
 docker exec broker kafka-console-consumer \
   --bootstrap-server broker:29092 \
-  --topic XEPDB1.ORDERMGMT.ORDERS
+  --topic XEPDB1.ORDERMGMT.CUSTOMERS \
+  --from-beginning --max-messages 1
+```
 
-# Check JMX (broker)
-# Use jconsole <EC2-IP>:9101
+---
 
-# Check XStream capture
+## Monitoring
+
+**JMX Metrics:**
+- Broker: `jconsole <host>:9101`
+- Schema Registry: `jconsole <host>:9102`
+- Kafka Connect: `jconsole <host>:9103`
+- Control Center: `jconsole <host>:9104`
+
+**Control Center UI:**
+- http://localhost:9021
+
+**Connector Status:**
+```bash
+curl http://localhost:8083/connectors/oracle-xstream-cdc-source/status
+```
+
+---
+
+## Troubleshooting
+
+**Connector not running:**
+```bash
+curl -X POST http://localhost:8083/connectors/oracle-xstream-cdc-source/restart
+```
+
+**Check logs:**
+```bash
+docker logs broker
+docker logs connect
+docker logs oracle21c
+```
+
+**Verify XStream capture:**
+```bash
 docker exec oracle21c sqlplus sys/confluent123@XEPDB1 as sysdba <<EOF
 SELECT CAPTURE_NAME, STATUS, STATE FROM DBA_CAPTURE;
 EXIT;
@@ -290,53 +198,14 @@ EOF
 
 ---
 
-## Troubleshooting
+## Documentation
 
-### Connector Not Running
-```bash
-curl http://localhost:8083/connectors/oracle-xstream-cdc-source/status
-curl -X POST http://localhost:8083/connectors/oracle-xstream-cdc-source/restart
-```
-
-### No Messages in Kafka
-```bash
-# Connector starts from CURRENT, make a new change
-docker exec -i oracle21c sqlplus -s ordermgmt/kafka@XEPDB1 <<EOF
-INSERT INTO ORDERS (ORDER_ID, CUSTOMER_ID, STATUS, ORDER_DATE) 
-VALUES (998, 1, 'TEST', SYSDATE);
-COMMIT;
-EXIT;
-EOF
-```
-
-### Check Logs
-```bash
-docker logs broker
-docker logs connect
-docker logs oracle21c
-```
-
----
-
-## Support & Resources
-
-- **Documentation:** All guides in this repository
+- **DEPLOYMENT_GUIDE.md** - Complete step-by-step deployment instructions
 - **Oracle XStream:** https://docs.oracle.com/en/database/oracle/oracle-database/21/xstrm/
-- **Confluent Oracle CDC:** https://docs.confluent.io/kafka-connectors/oracle-xstream-cdc-source/current/
-- **Kafka Monitoring:** https://kafka.apache.org/documentation/#monitoring
+- **Confluent CDC Connector:** https://docs.confluent.io/kafka-connectors/oracle-xstream-cdc-source/current/
 
 ---
 
-## License & Disclaimer
-
-This is a demonstration/reference implementation. Ensure proper licensing for production use:
-- Oracle Database Express Edition
-- Confluent Platform Enterprise
-- Oracle XStream CDC Source Connector
-
----
-
-**Created:** July 12, 2026  
-**Technology Stack:** Oracle 21c XE + Confluent Platform 7.6.0 + JMX Monitoring  
-**Deployment Model:** Docker-based, single-node setup (scalable to multi-node)  
-**Status:** ✅ Production-Ready (Verified Working Configuration)
+**Status:** Production-Ready  
+**Last Verified:** July 13, 2026  
+**License:** See Oracle and Confluent licensing requirements
