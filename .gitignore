@@ -1,0 +1,21 @@
+# Docker volumes and data
+confluent-platform/connectors/
+confluent-platform/ojdbc11.jar
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.bak
+*~

@@ -1,8 +1,21 @@
 # Oracle XStream CDC with Confluent Platform - Complete Deployment Guide
 
 **Version:** 2.0 (KRaft Mode + JMX Monitoring)  
-**Updated:** July 12, 2026  
-**Architecture:** Oracle 21c XE + Confluent Platform 7.6.0 + KRaft (No Zookeeper)
+**Updated:** July 13, 2026  
+**Architecture:** Oracle 21c XE + Confluent Platform 7.6.0 + KRaft (No Zookeeper)  
+**Verified On:** AWS EC2 (ec2-13-233-14-155.ap-south-1.compute.amazonaws.com)
+
+---
+
+## ⚠️ CRITICAL: Read Before Starting
+
+### Disk Space Requirement
+**Minimum:** 50 GB free disk space  
+**Recommended:** 100 GB or more
+
+**Why?** The Oracle 21c XE Docker image alone is ~10 GB. Deployment will fail with "no space left on device" errors if you don't have sufficient disk space.
+
+**AWS EC2 Users:** The default EC2 volume is 8 GB. You MUST resize it to at least 50 GB before starting deployment, or the Oracle container deployment will fail.
 
 ---
 
@@ -24,7 +37,7 @@
 
 ### System Requirements
 - **EC2 Instance:** t3.xlarge or larger (4 vCPU, 16 GB RAM minimum)
-- **Storage:** 100 GB minimum
+- **Storage:** 100 GB minimum (⚠️ CRITICAL - see warning above)
 - **OS:** Amazon Linux 2023
 - **Network:** Security group with required ports open
 

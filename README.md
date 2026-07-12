@@ -3,8 +3,23 @@
 ## Complete Documentation Package with JMX Monitoring
 
 **Version:** 2.0 (KRaft Mode - No Zookeeper!)  
-**Date:** July 12, 2026  
+**Date:** July 13, 2026  
 **Stack:** Oracle 21c XE + Confluent Platform 7.6.0 (KRaft) + JMX Monitoring
+
+---
+
+## ⚠️ IMPORTANT: System Requirements
+
+### Disk Space Requirements
+**Minimum:** 50 GB free disk space  
+**Recommended:** 100 GB or more
+
+The Oracle 21c XE Docker image is approximately 10 GB, and with Confluent Platform components, you'll need sufficient space for:
+- Docker images (~15 GB)
+- Container volumes and logs (~10 GB)
+- Working space (~25 GB)
+
+**AWS EC2:** If using EC2, ensure your root volume is at least 50 GB. The default 8 GB volume will cause deployment failures with "no space left on device" errors.
 
 ---
 
