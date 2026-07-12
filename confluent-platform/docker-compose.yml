@@ -71,6 +71,7 @@ services:
     volumes:
       - ./connectors:/usr/share/confluent-hub-components
       - ./ojdbc11.jar:/usr/share/java/kafka-connect-jdbc/ojdbc11.jar
+      - ./xstreams.jar:/usr/share/java/kafka-connect-jdbc/xstreams.jar
     environment:
       CONNECT_BOOTSTRAP_SERVERS: 'broker:29092'
       CONNECT_REST_ADVERTISED_HOST_NAME: connect

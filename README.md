@@ -46,8 +46,17 @@ chmod +x 00_setup_cdc.sh
 
 # 4. Deploy Confluent Platform
 cd ../../confluent-platform
+
+# Download Oracle JDBC driver
 wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/233/ojdbc11.jar
-sudo chmod 777 $(pwd)
+
+# Copy Oracle XStream library from Oracle container
+docker cp oracle21c:/opt/oracle/product/21c/dbhomeXE/rdbms/jlib/xstreams.jar .
+
+# Set permissions
+sudo chmod 777 $(pwd) && sudo chmod 644 *.jar
+
+# Deploy services
 docker-compose up -d
 
 # Wait for services to start (2-3 minutes)

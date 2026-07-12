@@ -210,33 +210,128 @@ Expected: 5 customers, 5 orders, 10 order items
 
 ## Phase 4: Confluent Platform Deployment
 
-### 4.1 Prepare Confluent Directory
+### 4.1 Prerequisites
+
+Before deploying Confluent Platform, ensure you have:
+
+**System Requirements:**
+- Docker and Docker Compose running
+- Oracle container deployed and healthy
+- Shared Docker network created (`shared-network`)
+- Minimum 8 GB free disk space for Confluent images
+
+**Network Connectivity:**
+- Ports 9092, 8081, 8083, 9021, 9101-9104 available
+- Connectivity between Oracle container and Confluent services
+
+**Required JAR Files:**
+
+The Oracle XStream CDC connector requires Oracle client libraries that are not included in the connector package:
+
+1. **ojdbc11.jar** - Oracle JDBC Driver (required)
+2. **xstreams.jar** - Oracle XStream API Library (required for XStream mode)
+
+### 4.2 Prepare Confluent Directory
 
 ```bash
 cd ~/OracleXstreamonCP/confluent-platform
-
-# Download Oracle JDBC driver
-wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/233/ojdbc11.jar
-
-# Set permissions
-sudo chmod 777 $(pwd)
-
-# Verify files
-ls -lh
 ```
 
-**Required files:**
-- `docker-compose.yml`
-- `oracle-xstream-cdc-config.json`
-- `ojdbc11.jar`
+### 4.3 Download Oracle JDBC Driver
 
-### 4.2 Deploy Confluent Platform
+Download the Oracle JDBC driver (ojdbc11.jar) from Oracle's website:
+
+```bash
+# Option 1: Direct download (requires accepting Oracle license)
+wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/233/ojdbc11.jar
+
+# Option 2: If wget fails due to license acceptance, download manually from:
+# https://www.oracle.com/database/technologies/appdev/jdbc-downloads.html
+# Then upload to the confluent-platform directory
+```
+
+**Verify download:**
+```bash
+ls -lh ojdbc11.jar
+# Expected: ~6.8 MB
+```
+
+### 4.4 Copy Oracle XStream Library
+
+The `xstreams.jar` library is required for XStream API connectivity. This file is included in the Oracle Database installation.
+
+**Copy from Oracle container:**
+
+```bash
+# Copy xstreams.jar from Oracle 21c container
+docker cp oracle21c:/opt/oracle/product/21c/dbhomeXE/rdbms/jlib/xstreams.jar .
+
+# Verify the file
+ls -lh xstreams.jar
+# Expected: ~73 KB
+```
+
+**Alternative - If using Oracle Instant Client:**
+
+If you have Oracle Instant Client installed locally:
+
+```bash
+# Find xstreams.jar in Oracle Instant Client directory
+find /opt/oracle/instantclient* -name xstreams.jar
+
+# Copy to confluent-platform directory
+cp /opt/oracle/instantclient_21_X/xstreams.jar .
+```
+
+**Alternative - Download Oracle Instant Client:**
+
+If Oracle container is not available:
+
+1. Download Oracle Instant Client Basic package from:
+   - https://www.oracle.com/database/technologies/instant-client/downloads.html
+   
+2. Extract and locate xstreams.jar:
+   ```bash
+   unzip instantclient-basic-linux.x64-21.X.zip
+   find instantclient_21_X -name xstreams.jar
+   cp instantclient_21_X/xstreams.jar ~/OracleXstreamonCP/confluent-platform/
+   ```
+
+### 4.5 Set File Permissions
+
+```bash
+# Set directory permissions
+sudo chmod 777 $(pwd)
+
+# Set JAR file permissions
+sudo chmod 644 ojdbc11.jar xstreams.jar
+```
+
+### 4.6 Verify Required Files
+
+```bash
+ls -lh *.jar
+```
+
+**Expected output:**
+```
+-rw-r--r-- 1 user user 6.8M ojdbc11.jar
+-rw-r--r-- 1 user user  73K xstreams.jar
+```
+
+**Required files checklist:**
+- ✅ `docker-compose.yml` (from repository)
+- ✅ `oracle-xstream-cdc-config.json` (from repository)
+- ✅ `ojdbc11.jar` (downloaded from Oracle)
+- ✅ `xstreams.jar` (copied from Oracle container/client)
+
+### 4.7 Deploy Confluent Platform
 
 ```bash
 docker-compose up -d
 ```
 
-### 4.3 Verify Services
+### 4.8 Verify Services
 
 ```bash
 docker-compose ps
@@ -253,7 +348,7 @@ docker-compose ps
 watch -n 5 'docker-compose ps'
 ```
 
-### 4.4 Verify Kafka Connect Plugins
+### 4.9 Verify Kafka Connect Plugins
 
 ```bash
 curl -s http://localhost:8083/connector-plugins | jq '.[] | select(.class | contains("OracleCdc"))'

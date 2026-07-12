@@ -1,6 +1,7 @@
 # Docker volumes and data
 confluent-platform/connectors/
 confluent-platform/ojdbc11.jar
+confluent-platform/xstreams.jar
 
 # Logs
 *.log
