@@ -2,27 +2,33 @@
 
 ## Complete Documentation Package with JMX Monitoring
 
-**Version:** 2.0 (Stable with JMX Monitoring)  
+**Version:** 2.0 (KRaft Mode - No Zookeeper!)  
 **Date:** July 12, 2026  
-**Stack:** Oracle 21c XE + Confluent Platform 7.6.0 + JMX Monitoring
+**Stack:** Oracle 21c XE + Confluent Platform 7.6.0 (KRaft) + JMX Monitoring
 
 ---
 
 ## What's New in Version 2.0
 
-### 1. JMX Monitoring Support ✅
+### 1. KRaft Mode - No Zookeeper! ✅
+- Kafka runs in KRaft mode (Zookeeper completely removed)
+- Simpler architecture with fewer moving parts
+- Faster startup and better performance
+- Future-proof (Zookeeper is deprecated in Kafka 4.0+)
+
+### 2. JMX Monitoring Support ✅
 - All Confluent services expose JMX metrics
-- Ports: 9100 (Zookeeper), 9101 (Broker), 9102 (Schema Registry), 9103 (Connect), 9104 (Control Center)
+- Ports: 9101 (Broker), 9102 (Schema Registry), 9103 (Connect), 9104 (Control Center)
 - Ready for Prometheus/Grafana integration
 - Production-ready monitoring
 
-### 2. Oracle Setup Automation ✅
+### 3. Oracle Setup Automation ✅
 - Complete SQL scripts for CDC configuration
 - Automated XStream outbound server setup
 - Schema rules configured correctly
 - Sample data loading scripts
 
-### 3. Streamlined Deployment ✅
+### 4. Streamlined Deployment ✅
 - One-command deployment
 - Copy-paste ready scripts
 - Complete step-by-step guide
@@ -106,7 +112,7 @@ See **DEPLOYMENT_GUIDE.md** for complete step-by-step instructions including:
 
 ## Architecture
 
-### With Zookeeper (Stable - Recommended)
+### KRaft Mode (Production-Ready - No Zookeeper!)
 
 ```
 ┌─────────────────┐
@@ -117,11 +123,8 @@ See **DEPLOYMENT_GUIDE.md** for complete step-by-step instructions including:
          │ CDC
          ▼
 ┌─────────────────┐
-│  Zookeeper      │ ports 2181, 9100 (JMX)
-└────────┬────────┘
-         │
-┌────────┴────────┐
 │  Kafka Broker   │ ports 9092, 9101 (JMX)
+│  (KRaft Mode)   │ ← No Zookeeper needed!
 └────────┬────────┘
          │
 ┌────────┴────────┐
@@ -138,9 +141,14 @@ See **DEPLOYMENT_GUIDE.md** for complete step-by-step instructions including:
 └─────────────────┘
 ```
 
-### KRaft Mode (Experimental)
+**Key Benefits of KRaft Mode:**
+- ✅ No Zookeeper dependency (simpler architecture)
+- ✅ Faster startup time
+- ✅ Better scalability
+- ✅ Future-proof (Zookeeper deprecated in Kafka 4.0+)
+- ✅ Fewer moving parts = easier operations
 
-KRaft mode (Kafka without Zookeeper) is available in `docker-compose-kraft.yml` but requires additional testing. Use the stable version for production.
+**Legacy Option:** If you need Zookeeper for compatibility, use `docker-compose-stable.yml`
 
 ---
 
@@ -150,8 +158,7 @@ All services expose JMX metrics for monitoring:
 
 | Service | JMX Port | Metrics Available |
 |---------|----------|-------------------|
-| Zookeeper | 9100 | Zookeeper health, connections |
-| Kafka Broker | 9101 | Message rates, bytes in/out, partition metrics |
+| Kafka Broker (KRaft) | 9101 | Message rates, bytes in/out, partition metrics, controller metrics |
 | Schema Registry | 9102 | Schema operations, API calls |
 | Kafka Connect | 9103 | Connector status, task metrics, throughput |
 | Control Center | 9104 | UI metrics, monitoring data |
@@ -170,11 +177,12 @@ See DEPLOYMENT_GUIDE.md for Prometheus/Grafana setup instructions.
 
 ## Verified Working
 
+✅ **KRaft Mode** - Kafka without Zookeeper  
 ✅ Oracle 21c XE with XStream CDC  
 ✅ Confluent Platform 7.6.0  
 ✅ Oracle XStream CDC Connector 2.9.2  
 ✅ Real-time INSERT/UPDATE/DELETE capture  
-✅ JMX metrics exposed on all services  
+✅ JMX metrics exposed (ports 9101-9104)  
 ✅ Topics auto-created: XEPDB1.ORDERMGMT.ORDERS, ORDER_ITEMS, CUSTOMERS  
 ✅ Tested on AWS EC2 (t3.xlarge, Amazon Linux 2023)
 
@@ -204,11 +212,11 @@ See DEPLOYMENT_GUIDE.md for Prometheus/Grafana setup instructions.
 
 ## Configuration Files
 
-### docker-compose-stable.yml
-Stable configuration with Zookeeper + JMX monitoring (Recommended)
+### docker-compose.yml (Primary)
+**KRaft mode** - No Zookeeper + JMX monitoring (Production-Ready)
 
-### docker-compose-kraft.yml
-Experimental KRaft mode (Kafka without Zookeeper)
+### docker-compose-stable.yml (Legacy)
+Zookeeper-based configuration + JMX monitoring (for compatibility)
 
 ### oracle-xstream-cdc-config.json
 Verified working connector configuration
