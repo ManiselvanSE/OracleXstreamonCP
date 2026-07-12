@@ -218,22 +218,17 @@ cd ~/OracleXstreamonCP/confluent-platform
 # Download Oracle JDBC driver
 wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/233/ojdbc11.jar
 
-# Copy XStream JAR from Oracle container (required for XStream CDC)
-docker cp oracle21c:/opt/oracle/product/21c/dbhomeXE/rdbms/jlib/xstreams.jar .
-
 # Set permissions
 sudo chmod 777 $(pwd)
-sudo chmod 644 *.jar
 
 # Verify files
-ls -lh *.jar
+ls -lh
 ```
 
 **Required files:**
 - `docker-compose.yml`
 - `oracle-xstream-cdc-config.json`
-- `ojdbc11.jar` (JDBC driver)
-- `xstreams.jar` (XStream API library)
+- `ojdbc11.jar`
 
 ### 4.2 Deploy Confluent Platform
 
