@@ -1,0 +1,24 @@
+{
+  "name": "oracle-xstream-cdc-source",
+  "config": {
+    "connector.class": "io.confluent.connect.oracle.cdc.OracleCdcSourceConnector",
+    "tasks.max": "1",
+    "oracle.server": "oracle21c",
+    "oracle.port": "1521",
+    "oracle.sid": "XE",
+    "oracle.pdb.name": "XEPDB1",
+    "oracle.username": "c##xstrmadmin",
+    "oracle.password": "xstrmadmin123",
+    "xstream.server.name": "xout",
+    "start.from": "CURRENT",
+    "snapshot.mode": "schema_only",
+    "table.inclusion.regex": ".*ORDERS.*|.*ORDER_ITEMS.*|.*CUSTOMERS.*",
+    "confluent.topic.bootstrap.servers": "broker:29092",
+    "confluent.topic.replication.factor": "1",
+    "redo.log.consumer.bootstrap.servers": "broker:29092",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "false"
+  }
+}
