@@ -200,7 +200,7 @@ docker logs oracle21c
 
 **Verify XStream capture:**
 ```bash
-docker exec oracle21c sqlplus sys/confluent123@XEPDB1 as sysdba <<EOF
+docker exec oracle21c sqlplus sys/"${ORACLE_PWD:?Set ORACLE_PWD in your shell}"@XEPDB1 as sysdba <<EOF
 SELECT CAPTURE_NAME, STATUS, STATE FROM DBA_CAPTURE;
 EXIT;
 EOF
