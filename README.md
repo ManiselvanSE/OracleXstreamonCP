@@ -33,7 +33,8 @@ docker network create shared-network
 docker run -d --name oracle21c \
   --network shared-network \
   -p 1521:1521 -p 5500:5500 \
-  -e ORACLE_PWD=confluent123 \
+  -e ORACLE_PWD="${ORACLE_PWD:?Set ORACLE_PWD in your shell}"
+> **Credential safety:** Set `ORACLE_PWD` in your shell before running the container command. Do not commit real passwords or reuse example credentials. \
   container-registry.oracle.com/database/express:21.3.0-xe
 
 # Wait for Oracle to start (2-3 minutes)
